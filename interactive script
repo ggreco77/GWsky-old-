@@ -1,0 +1,318 @@
+from astropy.utils.data import get_pkg_data_filename
+from reproject import reproject_from_healpix
+from astropy.io import fits
+
+#Two input calls asking you to load a probability Healpix sky map and specify 
+#a name for the output (http://www.ligo.org/scientists/first2years/).
+
+sky_map=""
+while sky_map=="":
+    sky_map=raw_input(' load a sky map: ')
+    out_sky_map=""                                            
+while out_sky_map=="":                                    
+    out_sky_map=raw_input(' choose an output file name: ')
+
+
+filename_ligo = get_pkg_data_filename(sky_map)
+
+hdu_ligo = fits.open(filename_ligo)[1]
+
+from astropy.io import fits
+
+target_header = fits.Header.fromstring("""
+NAXIS   =                    2
+NAXIS1  =                 1000
+NAXIS2  =                  800
+CTYPE1  = 'RA---MOL'
+CRPIX1  =                  500
+CRVAL1  =                180.0
+CDELT1  =                 -0.4
+CUNIT1  = 'deg     '
+CTYPE2  = 'DEC--MOL'
+CRPIX2  =                  400
+CRVAL2  =                  0.0
+CDELT2  =                  0.4
+CUNIT2  = 'deg     '
+COORDSYS= 'icrs    '
+""", sep='\n')
+
+array, footprint = reproject_from_healpix(filename_ligo, target_header)
+
+from astropy.wcs import WCS
+
+target_wcs = WCS(target_header)
+array, footprint = reproject_from_healpix(filename_ligo, target_wcs,
+                                          shape_out=(240,480))
+data = hdu_ligo.data['PROB']
+array, footprint = reproject_from_healpix((data, 'icrs'),
+                                           target_header, nested=True)
+from astropy.coordinates import FK5
+array, footprint = reproject_from_healpix((data, FK5(equinox='J2010')),
+                                          target_header, nested=True)
+
+#Nine input calls asking you the main header values to customize the reprojected image; 
+#for details see http://reproject.readthedocs.org/en/stable/healpix.html.
+
+var=raw_input(' Choose your own header values otherwise press ENTER to the default ( ) ')
+
+proj =raw_input(' Type CAR for plate carrée projection (Mollweide projection) ') 
+               
+if proj=='CAR':
+    target_header['CTYPE1']= 'RA---CAR'
+    target_header['CTYPE2']= 'DEC--CAR'
+else:
+     target_header['CTYPE1']= 'RA---MOL'
+     target_header['CTYPE2']= 'DEC--MOL
+     
+ax1 =raw_input(' Do you want to change NAXIS1? Specify your own value (1000) ')
+        
+if ax1 == var: 
+     target_header['NAXIS1']=1000
+else:
+     target_header['NAXIS1']=int(ax1)
+    
+crp1 =raw_input(' Do you want to change CRPIX1? Specify your own value (500) ')
+
+if crp1==var:
+    target_header['CRPIX1']=500
+else:
+     target_header['CRPIX1']=float(crp1)
+
+ax2 =raw_input(' Do you want to change NAXIS2? Specify your own value (800) ')
+            
+if ax2 == var: 
+    target_header['NAXIS2']=800
+else:
+    target_header['NAXIS2']=int(ax2)
+
+crp2 =raw_input(' Do you want to change CRPIX2? Specify your own value (400) ')
+
+if crp2==var:
+    target_header['CRPIX2']=400
+else:
+     target_header['CRPIX2']=float(crp2)
+
+crv1 =raw_input(' Do you want to change CRVAL1? Specify your own value (180.0) ')
+
+if crv1 == var: 
+    target_header['CRVAL1']=180.0
+else:
+     target_header['CRVAL1']=float(crv1)
+
+crv2=raw_input(' Do you want to change CRVAL2? Specify your own value (0.0) ')
+
+if crv2 == var: 
+    target_header['CRVAL2']=0.0
+else:
+    target_header['CRVAL2']=float(crv2)
+
+cde1 =raw_input(' Do you want to change CDELT1? Specify your own value (-0.4) ')
+
+if cde1 == var: 
+    target_header['CDELT1']=-0.4
+else:
+    target_header['CDELT1']=float(cde1)
+
+cde2 =raw_input(' Do you want to change CDELT2 ? Specify your own value (0.4) ')
+                
+if cde2 == var: 
+    target_header['CDELT2']=0.4
+else:
+    target_header['CDELT2']=float(cde2)
+
+array, footprint = reproject_from_healpix(filename_ligo, target_header)
+
+from astropy.wcs import WCS
+
+target_wcs = WCS(target_header)
+array, footprint = reproject_from_healpix(filename_ligo, target_wcs,
+                                          shape_out=(240,480))
+data = hdu_ligo.data['PROB']
+array, footprint = reproject_from_healpix((data, 'icrs'),
+
+                                          target_header, nested=True)
+from astropy.coordinates import FK5
+
+array, footprint = reproject_from_healpix((data, FK5(equinox='J2010')),
+                                          target_header, nested=True)
+
+fits.writeto(out_sky_map,array,target_header,clobber=True)
+
+#Sending tables and images over SAMP.
+
+#Progress Bar
+import time                                       
+import sys                                        
+                                                  
+toolbar_width = 35                                
+                                                  
+#setup toolbar                                     
+sys.stdout.write("[%s]" % (" " * toolbar_width))  
+sys.stdout.flush()                                
+sys.stdout.write("\b" * (toolbar_width+1))        
+                                                  
+for i in xrange(toolbar_width):                   
+    time.sleep(0.1)                               
+    # update the bar                              
+    sys.stdout.write("-")                         
+    sys.stdout.flush()                      
+                                                  
+sys.stdout.write("\n")                            
+
+
+print(' To visualize the Healpix image and its reprojection open Aladin Sky Atlas in your machine.')
+
+#Progress Bar
+import time                                       
+import sys                                        
+                                                  
+toolbar_width = 35                                
+                                                  
+#setup toolbar                                     
+sys.stdout.write("[%s]" % (" " * toolbar_width))  
+sys.stdout.flush()                                
+sys.stdout.write("\b" * (toolbar_width+1))        
+                                                  
+for i in xrange(toolbar_width):                   
+    time.sleep(0.1)                               
+    # update the bar                              
+    sys.stdout.write("-")                         
+    sys.stdout.flush()                            
+                                                  
+sys.stdout.write("\n")                            
+
+
+from astropy.vo.samp import SAMPIntegratedClient
+client = SAMPIntegratedClient()
+client.connect()
+
+params = {}
+import urlparse
+import os.path
+params["url"] = urlparse.urljoin('file:',
+				 os.path.abspath(out_sky_map))
+message = {}
+message["samp.mtype"] = "image.load.fits"
+message["samp.params"] = params
+client.notify_all(message)
+
+params = {}
+params["url"] = urlparse.urljoin('file:',
+				 os.path.abspath(sky_map))
+message = {}
+message["samp.mtype"] = "image.load.fits"
+message["samp.params"] = params
+client.notify_all(message)
+#Pixel table Calculation.
+
+import numpy as np
+
+NAXIS1 = int(target_header['NAXIS1'])  
+NAXIS2 =  int(target_header['NAXIS2'])
+
+x=range(1,NAXIS1+1)
+x=x*NAXIS2
+lenx=len(x)
+x_axis=np.reshape(x, (lenx, 1))
+
+y = range(1,NAXIS2+1)
+y=np.repeat(y,NAXIS1)
+leny=len(y)
+y_axis=np.reshape(y, (leny, 1))
+
+
+from astropy.wcs import WCS
+w=WCS(out_sky_map)
+RA,DEC= w.all_pix2world(x_axis,y_axis,1)
+
+import pyfits
+f = pyfits.open(out_sky_map)
+scidata = f[0].data
+pixel_value=np.reshape(scidata, (NAXIS1*NAXIS2, 1))
+
+
+table=np.concatenate([pixel_value,x_axis,y_axis,RA, DEC],axis=1)
+table=table[~np.isnan(table).any(axis=1)]
+
+np.savetxt('PixelTable', table,header='Prob   X    Y    RA   DEC',comments='')
+
+params = {}
+params["url"] = urlparse.urljoin('file:',
+				 os.path.abspath('PixelTable'))
+
+message = {}
+message["samp.mtype"] = "image.load.fits"
+message["samp.params"] = params
+client.notify_all(message)
+
+#Airmass calculation. Four input calls asking you the time in the format "2012-7-12 23:00:00",
+#the latitude, longitude and altitude of the Observatory.
+
+import astropy
+import numpy
+from   astropy import units as u
+from  astropy.time import Time
+from  astropy.coordinates import SkyCoord, EarthLocation, AltAz
+
+RA=RA[~np.isnan(RA).any(axis=1)]
+DEC=DEC[~np.isnan(DEC).any(axis=1)]
+air_sm=SkyCoord(ra=RA*u.deg, dec=DEC*u.deg, frame='icrs')
+
+time_input=""                                            
+while time_input=="":                                    
+    time_input=raw_input(' For airmass calculation insert the time in the form "2012-7-12 23:00:00" ')
+
+time = Time(time_input)
+
+lat_input=""                                            
+while lat_input=="":                                    
+    lat_input=raw_input(' insert the latitude of your Observatory (deg) ')
+lat_input=float(lat_input)
+
+lon_input=""                                            
+while lon_input=="":                                    
+    lon_input=raw_input(' insert the longitude of your Observatory (deg) ')
+lon_input=float(lon_input)
+
+height_input=""                                            
+while height_input=="":                                    
+    height_input=raw_input(' insert the altitude of your Observatory (m) ')
+height_input=float(height_input)
+
+observatory = astropy.coordinates.EarthLocation(
+        lat=lat_input*u.deg, lon=lon_input*u.deg, height=height_input*u.m)
+
+altaz = air_sm.transform_to(AltAz(obstime=time,location=observatory))
+airmass=altaz.secz
+
+airmass_pix=np.concatenate([RA, DEC, airmass],axis=1)
+np.savetxt('airmass_pix', airmass_pix,header='RA   DEC airmass',comments='')
+
+print(' Probability and airmass tables for each reprojected pixel are also sent. ')
+
+#Progress Bar
+import time                                       
+import sys                                        
+                                                  
+toolbar_width = 35                                
+                                                  
+#setup toolbar                                     
+sys.stdout.write("[%s]" % (" " * toolbar_width))  
+sys.stdout.flush()                                
+sys.stdout.write("\b" * (toolbar_width+1))        
+                                                  
+for i in xrange(toolbar_width):                   
+    time.sleep(0.1)                               
+    # update the bar                              
+    sys.stdout.write("-")                         
+    sys.stdout.flush()                            
+                                                  
+sys.stdout.write("\n")                            
+
+params = {}
+params["url"] = urlparse.urljoin('file:',
+				 os.path.abspath('airmass_pix'))
+message = {}
+message["samp.mtype"] = "image.load.fits"
+message["samp.params"] = params
+client.notify_all(message)
